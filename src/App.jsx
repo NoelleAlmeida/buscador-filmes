@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getFavorites, toggleFavorite } from "./utils/favorites";
+import {
+  addRecentSearch,
+  clearRecentSearches,
+  getRecentSearches,
+} from "./utils/recentSearches";
 import "./App.css";
 
 const PAGE_SIZE = 12;
@@ -9,29 +14,42 @@ const SORTS = ["relevance", "rating", "year"];
 export default function App() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [query, setQuery] = useState(""); // texto do input
-  const [activeQuery, setActiveQuery] = useState(""); // última busca “valendo”
+  // input + busca atual
+  const [query, setQuery] = useState("");
+  const [activeQuery, setActiveQuery] = useState("");
+
+  // dados
   const [movies, setMovies] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const [sort, setSort] = useState("relevance"); // relevance | rating | year
+  // filtros
+  const [sort, setSort] = useState("relevance");
   const [onlyFavs, setOnlyFavs] = useState(false);
 
+  // UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // favoritos e recentes
   const [favorites, setFavorites] = useState([]);
+  const [recent, setRecent] = useState([]);
 
+  // refs (pra evitar loops e buscas duplicadas)
   const abortRef = useRef(null);
   const lastFetchedRef = useRef("");
+  const prevUrlQRef = useRef("");
+  const selfUrlUpdateRef = useRef(false);
+  const skipDebounceRef = useRef(false);
 
   useEffect(() => {
     setFavorites(getFavorites());
+    setRecent(getRecentSearches());
   }, []);
 
   function updateUrl(nextQ, nextSort, nextFavs) {
-    const params = new URLSearchParams();
+    selfUrlUpdateRef.current = true;
 
+    const params = new URLSearchParams();
     if (nextQ) params.set("q", nextQ);
     if (nextSort && nextSort !== "relevance") params.set("sort", nextSort);
     if (nextFavs) params.set("favs", "1");
@@ -43,7 +61,6 @@ export default function App() {
     const cleaned = (q || "").trim();
     if (!cleaned) return;
 
-    // cancela a busca anterior (se existir)
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -58,7 +75,6 @@ export default function App() {
         `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleaned)}`,
         { signal: controller.signal },
       );
-
       if (!res.ok) throw new Error("Falha ao buscar. Tente novamente.");
 
       const data = await res.json();
@@ -85,58 +101,100 @@ export default function App() {
     }
   }
 
-  // ✅ Ao abrir link com ?q=... (ou mudar filtros pelo URL), o app se ajusta sozinho
+  function startSearch(q) {
+    const cleaned = (q || "").trim();
+    if (!cleaned) return;
+
+    setActiveQuery(cleaned);
+
+    // salva recentes
+    const nextRecent = addRecentSearch(cleaned);
+    setRecent(nextRecent);
+
+    // atualiza url + busca
+    updateUrl(cleaned, sort, onlyFavs);
+    runSearch(cleaned);
+  }
+
+  // ✅ Quando abrir um link com ?q=... (ou voltar/avançar), o app acompanha
   useEffect(() => {
     const q = (searchParams.get("q") || "").trim();
     const spSort = searchParams.get("sort") || "relevance";
     const spFavs = searchParams.get("favs") === "1";
-
     const safeSort = SORTS.includes(spSort) ? spSort : "relevance";
+
+    // evita debounce disparar por setQuery programático
+    skipDebounceRef.current = true;
 
     setQuery(q);
     setActiveQuery(q);
     setSort(safeSort);
     setOnlyFavs(spFavs);
 
-    // se o URL tem busca e ainda não foi carregada, carrega
-    if (q && q !== lastFetchedRef.current) {
-      runSearch(q);
+    const qChanged = q !== prevUrlQRef.current;
+    prevUrlQRef.current = q;
+
+    // se foi alteração nossa (setSearchParams), não refaça a busca aqui
+    if (selfUrlUpdateRef.current) {
+      selfUrlUpdateRef.current = false;
+      return;
     }
 
-    // se limpar q no URL, limpa a lista
-    if (!q) {
-      lastFetchedRef.current = "";
-      setMovies([]);
-      setError("");
-      setLoading(false);
-      setVisibleCount(PAGE_SIZE);
+    // mudança de URL por navegação do browser (back/forward) ou colar link
+    if (qChanged) {
+      if (!q) {
+        lastFetchedRef.current = "";
+        setMovies([]);
+        setError("");
+        setLoading(false);
+        setVisibleCount(PAGE_SIZE);
+      } else if (q !== lastFetchedRef.current) {
+        runSearch(q);
+      }
     }
   }, [searchParams]);
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  // ✅ Buscar enquanto digita (debounce)
+  useEffect(() => {
+    if (skipDebounceRef.current) {
+      skipDebounceRef.current = false;
+      return;
+    }
 
     const q = query.trim();
+
+    // evita buscar com 1 letra (fica mais “real” e não spamma API)
+    if (q.length < 2) return;
+
+    // se já é a busca ativa, não precisa repetir
+    if (q === activeQuery.trim()) return;
+
+    const t = setTimeout(() => {
+      startSearch(q);
+    }, 450);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, sort, onlyFavs]);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const q = query.trim();
     if (!q) return;
-
-    setActiveQuery(q);
-
-    // atualiza URL com a busca e filtros atuais
-    updateUrl(q, sort, onlyFavs);
-
-    // busca de verdade
-    runSearch(q);
+    startSearch(q);
   }
 
   function handleClear() {
+    if (abortRef.current) abortRef.current.abort();
+
     setQuery("");
     setActiveQuery("");
     setMovies([]);
     setError("");
     setLoading(false);
     setVisibleCount(PAGE_SIZE);
+    lastFetchedRef.current = "";
 
-    // limpa o q do URL (mantém sort/favs se você quiser; aqui mantemos)
     updateUrl("", sort, onlyFavs);
   }
 
@@ -155,7 +213,7 @@ export default function App() {
       copy.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
     if (sort === "year")
       copy.sort((a, b) => Number(b.year || 0) - Number(a.year || 0));
-    return copy; // relevance = ordem original
+    return copy;
   }, [moviesFiltered, sort]);
 
   const total = moviesSorted.length;
@@ -209,6 +267,43 @@ export default function App() {
         </div>
       </form>
 
+      {/* ✅ Recentes */}
+      {recent.length > 0 && (
+        <div className="recentRow">
+          <div className="recentLeft">
+            <span className="recentLabel">Recentes:</span>
+
+            <div className="chips">
+              {recent.map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  className="chip"
+                  onClick={() => {
+                    skipDebounceRef.current = true;
+                    setQuery(term);
+                    startSearch(term);
+                  }}
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="chip chipDanger"
+            onClick={() => {
+              const next = clearRecentSearches();
+              setRecent(next);
+            }}
+          >
+            Limpar histórico
+          </button>
+        </div>
+      )}
+
       <section className="section">
         {error && (
           <div className="errorBox">
@@ -219,8 +314,7 @@ export default function App() {
               onClick={() => {
                 const q = (activeQuery || query).trim();
                 if (!q) return;
-                updateUrl(q, sort, onlyFavs);
-                runSearch(q);
+                startSearch(q);
               }}
             >
               Tentar novamente
