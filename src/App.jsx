@@ -41,6 +41,10 @@ export default function App() {
   const selfUrlUpdateRef = useRef(false);
   const skipDebounceRef = useRef(false);
 
+  // A11y/UX refs
+  const inputRef = useRef(null);
+  const resultsRef = useRef(null);
+
   useEffect(() => {
     setFavorites(getFavorites());
     setRecent(getRecentSearches());
@@ -98,6 +102,10 @@ export default function App() {
       setError(err.message || "Erro inesperado.");
     } finally {
       setLoading(false);
+      // depois da busca (sucesso ou erro), manda foco pros resultados pra teclado/leitore
+      setTimeout(() => {
+        resultsRef.current?.focus?.();
+      }, 0);
     }
   }
 
@@ -116,14 +124,13 @@ export default function App() {
     runSearch(cleaned);
   }
 
-  // ✅ Quando abrir um link com ?q=... (ou voltar/avançar), o app acompanha
+  // ✅ Ao abrir link com ?q=... (ou voltar/avançar), o app acompanha
   useEffect(() => {
     const q = (searchParams.get("q") || "").trim();
     const spSort = searchParams.get("sort") || "relevance";
     const spFavs = searchParams.get("favs") === "1";
     const safeSort = SORTS.includes(spSort) ? spSort : "relevance";
 
-    // evita debounce disparar por setQuery programático
     skipDebounceRef.current = true;
 
     setQuery(q);
@@ -134,13 +141,11 @@ export default function App() {
     const qChanged = q !== prevUrlQRef.current;
     prevUrlQRef.current = q;
 
-    // se foi alteração nossa (setSearchParams), não refaça a busca aqui
     if (selfUrlUpdateRef.current) {
       selfUrlUpdateRef.current = false;
       return;
     }
 
-    // mudança de URL por navegação do browser (back/forward) ou colar link
     if (qChanged) {
       if (!q) {
         lastFetchedRef.current = "";
@@ -162,17 +167,10 @@ export default function App() {
     }
 
     const q = query.trim();
-
-    // evita buscar com 1 letra (fica mais “real” e não spamma API)
     if (q.length < 2) return;
-
-    // se já é a busca ativa, não precisa repetir
     if (q === activeQuery.trim()) return;
 
-    const t = setTimeout(() => {
-      startSearch(q);
-    }, 450);
-
+    const t = setTimeout(() => startSearch(q), 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, sort, onlyFavs]);
@@ -184,7 +182,7 @@ export default function App() {
     startSearch(q);
   }
 
-  function handleClear() {
+  function handleClear({ focusInput = true } = {}) {
     if (abortRef.current) abortRef.current.abort();
 
     setQuery("");
@@ -196,7 +194,44 @@ export default function App() {
     lastFetchedRef.current = "";
 
     updateUrl("", sort, onlyFavs);
+
+    if (focusInput) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
   }
+
+  // ✅ Acessibilidade/atalhos de teclado
+  useEffect(() => {
+    // foco no input ao abrir a página
+    inputRef.current?.focus();
+
+    function onKeyDown(e) {
+      // não roubar atalhos enquanto digita em inputs/textarea
+      const tag = (e.target?.tagName || "").toLowerCase();
+      const typing =
+        tag === "input" || tag === "textarea" || e.target?.isContentEditable;
+
+      // "/" foca na busca (padrão em muitos sites)
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        return;
+      }
+
+      // "Escape" limpa busca (se tiver algo)
+      if (e.key === "Escape") {
+        const hasSomething = query.trim() || movies.length || error;
+        if (hasSomething) {
+          e.preventDefault();
+          handleClear({ focusInput: true });
+        }
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, movies.length, error]);
 
   const active = activeQuery.trim();
   const hasActiveQuery = active.length > 0;
@@ -226,23 +261,43 @@ export default function App() {
 
   return (
     <main className="container">
+      {/* link “pular para resultados” (teclado/leitor) */}
+      <a href="#results" className="skipLink">
+        Pular para resultados
+      </a>
+
       <header className="header">
         <div>
           <h1 className="title">Buscador de Filmes 🎬</h1>
-          <p className="subtitle">React + Vite + API</p>
+          <p className="subtitle">
+            React + Vite + API • <span className="kbd">/</span> foca •{" "}
+            <span className="kbd">Esc</span> limpa
+          </p>
         </div>
 
-        <Link to="/favorites" className="favoritesLink">
+        <Link
+          to="/favorites"
+          className="favoritesLink"
+          aria-label="Abrir página de favoritos"
+        >
           ⭐ Favoritos ({favorites.length})
         </Link>
       </header>
 
-      <form onSubmit={handleSubmit} className="form">
+      <form
+        onSubmit={handleSubmit}
+        className="form"
+        role="search"
+        aria-label="Buscar filmes e séries"
+      >
         <input
+          ref={inputRef}
           className="input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Digite um filme/série..."
+          aria-label="Campo de busca"
+          autoComplete="off"
         />
 
         <div className="actions">
@@ -257,10 +312,11 @@ export default function App() {
           <button
             className="button buttonSecondary"
             type="button"
-            onClick={handleClear}
+            onClick={() => handleClear({ focusInput: true })}
             disabled={
               loading || (!query.trim() && movies.length === 0 && !error)
             }
+            aria-label="Limpar busca"
           >
             Limpar
           </button>
@@ -269,7 +325,7 @@ export default function App() {
 
       {/* ✅ Recentes */}
       {recent.length > 0 && (
-        <div className="recentRow">
+        <div className="recentRow" aria-label="Buscas recentes">
           <div className="recentLeft">
             <span className="recentLabel">Recentes:</span>
 
@@ -284,6 +340,7 @@ export default function App() {
                     setQuery(term);
                     startSearch(term);
                   }}
+                  aria-label={`Buscar novamente por ${term}`}
                 >
                   {term}
                 </button>
@@ -298,15 +355,27 @@ export default function App() {
               const next = clearRecentSearches();
               setRecent(next);
             }}
+            aria-label="Limpar histórico de buscas"
           >
             Limpar histórico
           </button>
         </div>
       )}
 
-      <section className="section">
+      <section className="section" id="results">
+        {/* container focável para teclado depois da busca */}
+        <div
+          ref={resultsRef}
+          tabIndex={-1}
+          className="resultsFocus"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {loading ? "Carregando resultados..." : ""}
+        </div>
+
         {error && (
-          <div className="errorBox">
+          <div className="errorBox" role="alert">
             <p className="error">{error}</p>
             <button
               className="button buttonSecondary"
@@ -324,7 +393,7 @@ export default function App() {
 
         {!error && !loading && hasActiveQuery && (
           <div className="resultsBar">
-            <p className="count">
+            <p className="count" aria-live="polite">
               Resultados para <strong>{active}</strong>:{" "}
               <strong>{total}</strong> {total === 1 ? "item" : "itens"} •
               Mostrando <strong>{shown}</strong>
@@ -341,6 +410,7 @@ export default function App() {
                     setSort(nextSort);
                     updateUrl(active, nextSort, onlyFavs);
                   }}
+                  aria-label="Ordenar resultados"
                 >
                   <option value="relevance">Relevância</option>
                   <option value="rating">Nota</option>
@@ -357,6 +427,7 @@ export default function App() {
                     setOnlyFavs(nextFavs);
                     updateUrl(active, sort, nextFavs);
                   }}
+                  aria-label="Mostrar apenas favoritos"
                 />
                 Mostrar só favoritos
               </label>
@@ -375,7 +446,7 @@ export default function App() {
         )}
 
         {loading && (
-          <ul className="grid">
+          <ul className="grid" aria-label="Carregando lista de resultados">
             {Array.from({ length: PAGE_SIZE }).map((_, idx) => (
               <li key={idx} className="card skeletonCard">
                 <div className="posterWrap skeleton" />
@@ -391,13 +462,17 @@ export default function App() {
 
         {!loading && displayMovies.length > 0 && (
           <>
-            <ul className="grid">
+            <ul className="grid" aria-label="Resultados da busca">
               {displayMovies.map((m) => {
                 const isFav = favorites.some((f) => f.id === m.id);
 
                 return (
                   <li key={m.id} className="card">
-                    <Link to={`/show/${m.id}`} className="cardLink">
+                    <Link
+                      to={`/show/${m.id}`}
+                      className="cardLink"
+                      aria-label={`Abrir detalhes de ${m.title}`}
+                    >
                       <div className="posterWrap">
                         {isFav && <span className="favBadge">★ Favorito</span>}
 
@@ -438,6 +513,11 @@ export default function App() {
                             const next = toggleFavorite(m);
                             setFavorites(next);
                           }}
+                          aria-label={
+                            isFav
+                              ? `Remover ${m.title} dos favoritos`
+                              : `Adicionar ${m.title} aos favoritos`
+                          }
                         >
                           {isFav ? "★ Favoritado" : "☆ Favoritar"}
                         </button>
@@ -454,6 +534,7 @@ export default function App() {
                   type="button"
                   className="button loadMoreBtn"
                   onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+                  aria-label="Carregar mais resultados"
                 >
                   Carregar mais
                 </button>

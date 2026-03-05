@@ -3,6 +3,33 @@
   padding: 28px 16px 40px;
 }
 
+.skipLink {
+  position: absolute;
+  left: -9999px;
+  top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  color: #f4f4f5;
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  left: 16px;
+  z-index: 10;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  opacity: 0.95;
+}
+
 .header {
   display: flex;
   align-items: flex-start;
@@ -79,6 +106,16 @@
   cursor: not-allowed;
 }
 
+/* foco visível para teclado */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
 /* ✅ Recentes */
 .recentRow {
   margin-top: 12px;
@@ -110,15 +147,15 @@
 .chip {
   padding: 8px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
   color: #f4f4f5;
   cursor: pointer;
   font-size: 13px;
 }
 
 .chip:hover {
-  background: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .chipDanger {
@@ -134,13 +171,22 @@
   margin-top: 22px;
 }
 
+.resultsFocus {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .errorBox {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   border: 1px solid rgba(255, 77, 109, 0.35);
-  background: rgba(255, 77, 109, 0.10);
+  background: rgba(255, 77, 109, 0.1);
   padding: 12px;
   border-radius: 14px;
   margin-bottom: 12px;
@@ -186,8 +232,8 @@
 .select {
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
   color: #f4f4f5;
   outline: none;
 }
@@ -215,7 +261,10 @@
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
 }
 
 .card:hover {
@@ -306,10 +355,12 @@
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.1);
   color: #f4f4f5;
   cursor: pointer;
-  transition: background 120ms ease, transform 120ms ease;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
 }
 
 .favBtn:hover {
@@ -335,9 +386,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.06),
-    rgba(255,255,255,0.12),
-    rgba(255,255,255,0.06)
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 255, 255, 0.06)
   );
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite;
@@ -361,8 +412,12 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @media (max-width: 640px) {
