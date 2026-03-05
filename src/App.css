@@ -15,6 +15,13 @@
   margin-bottom: 16px;
 }
 
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .title {
   margin: 0;
   font-size: 28px;
@@ -23,6 +30,16 @@
 .subtitle {
   margin: 6px 0 0;
   opacity: 0.75;
+}
+
+.favoritesLink {
+  text-decoration: none;
+  border: 1px solid #e3e3e3;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: inherit;
+  opacity: 0.9;
+  white-space: nowrap;
 }
 
 .form {
@@ -89,7 +106,7 @@
 }
 
 .cardLink:hover {
-  opacity: 0.95;
+  opacity: 0.97;
 }
 
 .posterWrap {
@@ -145,4 +162,18 @@
 .metaItem {
   font-size: 13px;
   opacity: 0.85;
+}
+
+.favBtn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  cursor: pointer;
+  background: white;
+}
+
+.favBtn:hover {
+  opacity: 0.95;
 }

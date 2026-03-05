@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getFavorites, toggleFavorite } from "./utils/favorites";
 import "./App.css";
 
 export default function App() {
@@ -7,6 +8,11 @@ export default function App() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [favorites, setFavorites] = useState([]);
+
+  useEffect(() => {
+    setFavorites(getFavorites());
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -49,8 +55,16 @@ export default function App() {
   return (
     <main className="container">
       <header className="header">
-        <h1 className="title">Buscador de Filmes 🎬</h1>
-        <p className="subtitle">React + Vite + API</p>
+        <div className="headerRow">
+          <div>
+            <h1 className="title">Buscador de Filmes 🎬</h1>
+            <p className="subtitle">React + Vite + API</p>
+          </div>
+
+          <Link to="/favorites" className="favoritesLink">
+            ⭐ Favoritos ({favorites.length})
+          </Link>
+        </div>
       </header>
 
       <form onSubmit={handleSubmit} className="form">
@@ -78,41 +92,58 @@ export default function App() {
 
         {movies.length > 0 && (
           <ul className="grid">
-            {movies.map((m) => (
-              <li key={m.id} className="card">
-                <Link to={`/show/${m.id}`} className="cardLink">
-                  <div className="posterWrap">
-                    {m.image ? (
-                      <img
-                        className="poster"
-                        src={m.image}
-                        alt={`Poster de ${m.title}`}
-                      />
-                    ) : (
-                      <div className="posterPlaceholder">Sem imagem</div>
-                    )}
-                  </div>
+            {movies.map((m) => {
+              const isFav = favorites.some((f) => f.id === m.id);
 
-                  <div className="cardBody">
-                    <div className="cardTop">
-                      <strong className="cardTitle">{m.title}</strong>
-                      <span className="pill">{m.year}</span>
+              return (
+                <li key={m.id} className="card">
+                  <Link to={`/show/${m.id}`} className="cardLink">
+                    <div className="posterWrap">
+                      {m.image ? (
+                        <img
+                          className="poster"
+                          src={m.image}
+                          alt={`Poster de ${m.title}`}
+                        />
+                      ) : (
+                        <div className="posterPlaceholder">Sem imagem</div>
+                      )}
                     </div>
 
-                    <div className="meta">
-                      <span className="metaItem">
-                        ⭐ {m.rating !== null ? m.rating : "—"}
-                      </span>
-                      <span className="metaItem">
-                        {m.genres.length
-                          ? m.genres.slice(0, 2).join(" • ")
-                          : "Sem gênero"}
-                      </span>
+                    <div className="cardBody">
+                      <div className="cardTop">
+                        <strong className="cardTitle">{m.title}</strong>
+                        <span className="pill">{m.year}</span>
+                      </div>
+
+                      <div className="meta">
+                        <span className="metaItem">
+                          ⭐ {m.rating !== null ? m.rating : "—"}
+                        </span>
+                        <span className="metaItem">
+                          {m.genres.length
+                            ? m.genres.slice(0, 2).join(" • ")
+                            : "Sem gênero"}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="favBtn"
+                        onClick={(e) => {
+                          e.preventDefault(); // não navegar
+                          e.stopPropagation();
+                          const next = toggleFavorite(m);
+                          setFavorites(next);
+                        }}
+                      >
+                        {isFav ? "★ Favoritado" : "☆ Favoritar"}
+                      </button>
                     </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
