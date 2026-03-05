@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getFavorites, toggleFavorite } from "../utils/favorites";
 
 export default function ShowDetails() {
   const { id } = useParams();
@@ -7,6 +8,11 @@ export default function ShowDetails() {
   const [show, setShow] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [favorites, setFavorites] = useState([]);
+
+  useEffect(() => {
+    setFavorites(getFavorites());
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -29,6 +35,22 @@ export default function ShowDetails() {
     load();
   }, [id]);
 
+  const mappedForFavorites = useMemo(() => {
+    if (!show) return null;
+    return {
+      id: show.id,
+      title: show.name,
+      year: show.premiered ? show.premiered.slice(0, 4) : "—",
+      image: show.image?.medium || "",
+      genres: show.genres || [],
+      rating: show.rating?.average ?? null,
+    };
+  }, [show]);
+
+  const isFav = useMemo(() => {
+    return favorites.some((f) => String(f.id) === String(id));
+  }, [favorites, id]);
+
   return (
     <main
       style={{
@@ -38,9 +60,17 @@ export default function ShowDetails() {
         fontFamily: "system-ui",
       }}
     >
-      <Link to="/" style={{ textDecoration: "none" }}>
-        ← Voltar
-      </Link>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+      >
+        <Link to="/" style={{ textDecoration: "none" }}>
+          ← Voltar
+        </Link>
+
+        <Link to="/favorites" style={{ textDecoration: "none" }}>
+          ⭐ Favoritos ({favorites.length})
+        </Link>
+      </div>
 
       {loading && <p style={{ marginTop: 16 }}>Carregando...</p>}
       {error && <p style={{ marginTop: 16, color: "crimson" }}>{error}</p>}
@@ -76,6 +106,26 @@ export default function ShowDetails() {
                 Sem imagem
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!mappedForFavorites) return;
+                const next = toggleFavorite(mappedForFavorites);
+                setFavorites(next);
+              }}
+              style={{
+                marginTop: 12,
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #e3e3e3",
+                borderRadius: 10,
+                cursor: "pointer",
+                background: "white",
+              }}
+            >
+              {isFav ? "★ Remover dos favoritos" : "☆ Favoritar"}
+            </button>
           </div>
 
           <div>
