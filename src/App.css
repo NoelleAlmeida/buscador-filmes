@@ -487,3 +487,17 @@ select:focus-visible {
     justify-content: flex-start;
   }
 }
+/* ===== Sticky footer (rodapé sempre no fim) ===== */
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  flex: 1;
+}
+
+.footer {
+  margin-top: auto;
+}
