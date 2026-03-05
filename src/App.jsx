@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { getFavorites, toggleFavorite } from "./utils/favorites";
 import "./App.css";
 
 const PAGE_SIZE = 12;
+const SORTS = ["relevance", "rating", "year"];
 
 export default function App() {
-  const [query, setQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [query, setQuery] = useState(""); // texto do input
+  const [activeQuery, setActiveQuery] = useState(""); // última busca “valendo”
   const [movies, setMovies] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   const [sort, setSort] = useState("relevance"); // relevance | rating | year
   const [onlyFavs, setOnlyFavs] = useState(false);
 
@@ -17,25 +22,40 @@ export default function App() {
 
   const [favorites, setFavorites] = useState([]);
 
+  const abortRef = useRef(null);
+  const lastFetchedRef = useRef("");
+
   useEffect(() => {
     setFavorites(getFavorites());
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
+  function updateUrl(nextQ, nextSort, nextFavs) {
+    const params = new URLSearchParams();
+
+    if (nextQ) params.set("q", nextQ);
+    if (nextSort && nextSort !== "relevance") params.set("sort", nextSort);
+    if (nextFavs) params.set("favs", "1");
+
+    setSearchParams(params);
+  }
+
+  async function runSearch(q) {
+    const cleaned = (q || "").trim();
+    if (!cleaned) return;
+
+    // cancela a busca anterior (se existir)
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setLoading(true);
     setError("");
     setMovies([]);
     setVisibleCount(PAGE_SIZE);
 
-    const controller = new AbortController();
-
     try {
       const res = await fetch(
-        `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`,
+        `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleaned)}`,
         { signal: controller.signal },
       );
 
@@ -55,6 +75,7 @@ export default function App() {
         };
       });
 
+      lastFetchedRef.current = cleaned;
       setMovies(mapped);
     } catch (err) {
       if (err?.name === "AbortError") return;
@@ -62,19 +83,65 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  }
 
-    return () => controller.abort();
+  // ✅ Ao abrir link com ?q=... (ou mudar filtros pelo URL), o app se ajusta sozinho
+  useEffect(() => {
+    const q = (searchParams.get("q") || "").trim();
+    const spSort = searchParams.get("sort") || "relevance";
+    const spFavs = searchParams.get("favs") === "1";
+
+    const safeSort = SORTS.includes(spSort) ? spSort : "relevance";
+
+    setQuery(q);
+    setActiveQuery(q);
+    setSort(safeSort);
+    setOnlyFavs(spFavs);
+
+    // se o URL tem busca e ainda não foi carregada, carrega
+    if (q && q !== lastFetchedRef.current) {
+      runSearch(q);
+    }
+
+    // se limpar q no URL, limpa a lista
+    if (!q) {
+      lastFetchedRef.current = "";
+      setMovies([]);
+      setError("");
+      setLoading(false);
+      setVisibleCount(PAGE_SIZE);
+    }
+  }, [searchParams]);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+
+    const q = query.trim();
+    if (!q) return;
+
+    setActiveQuery(q);
+
+    // atualiza URL com a busca e filtros atuais
+    updateUrl(q, sort, onlyFavs);
+
+    // busca de verdade
+    runSearch(q);
   }
 
   function handleClear() {
     setQuery("");
+    setActiveQuery("");
     setMovies([]);
     setError("");
     setLoading(false);
     setVisibleCount(PAGE_SIZE);
+
+    // limpa o q do URL (mantém sort/favs se você quiser; aqui mantemos)
+    updateUrl("", sort, onlyFavs);
   }
 
-  const hasQuery = query.trim().length > 0;
+  const active = activeQuery.trim();
+  const hasActiveQuery = active.length > 0;
 
   const moviesFiltered = useMemo(() => {
     if (!onlyFavs) return movies;
@@ -84,22 +151,20 @@ export default function App() {
 
   const moviesSorted = useMemo(() => {
     const copy = [...moviesFiltered];
-
-    if (sort === "rating") {
+    if (sort === "rating")
       copy.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
-    } else if (sort === "year") {
+    if (sort === "year")
       copy.sort((a, b) => Number(b.year || 0) - Number(a.year || 0));
-    }
-    // relevance = ordem original (não mexe)
-    return copy;
+    return copy; // relevance = ordem original
   }, [moviesFiltered, sort]);
 
   const total = moviesSorted.length;
   const shown = Math.min(visibleCount, total);
   const displayMovies = moviesSorted.slice(0, visibleCount);
 
-  const showEmptyState = !loading && !error && !hasQuery && movies.length === 0;
-  const showNoResults = !loading && !error && hasQuery && total === 0;
+  const showEmptyState =
+    !loading && !error && !hasActiveQuery && movies.length === 0;
+  const showNoResults = !loading && !error && hasActiveQuery && total === 0;
 
   return (
     <main className="container">
@@ -125,7 +190,7 @@ export default function App() {
         <div className="actions">
           <button
             className="button"
-            disabled={loading || !hasQuery}
+            disabled={loading || query.trim().length === 0}
             type="submit"
           >
             {loading ? "Buscando..." : "Buscar"}
@@ -135,7 +200,9 @@ export default function App() {
             className="button buttonSecondary"
             type="button"
             onClick={handleClear}
-            disabled={loading || (!hasQuery && movies.length === 0 && !error)}
+            disabled={
+              loading || (!query.trim() && movies.length === 0 && !error)
+            }
           >
             Limpar
           </button>
@@ -149,17 +216,22 @@ export default function App() {
             <button
               className="button buttonSecondary"
               type="button"
-              onClick={handleSubmit}
+              onClick={() => {
+                const q = (activeQuery || query).trim();
+                if (!q) return;
+                updateUrl(q, sort, onlyFavs);
+                runSearch(q);
+              }}
             >
               Tentar novamente
             </button>
           </div>
         )}
 
-        {!error && !loading && hasQuery && (
+        {!error && !loading && hasActiveQuery && (
           <div className="resultsBar">
             <p className="count">
-              Resultados para <strong>{query.trim()}</strong>:{" "}
+              Resultados para <strong>{active}</strong>:{" "}
               <strong>{total}</strong> {total === 1 ? "item" : "itens"} •
               Mostrando <strong>{shown}</strong>
             </p>
@@ -170,7 +242,11 @@ export default function App() {
                 <select
                   className="select"
                   value={sort}
-                  onChange={(e) => setSort(e.target.value)}
+                  onChange={(e) => {
+                    const nextSort = e.target.value;
+                    setSort(nextSort);
+                    updateUrl(active, nextSort, onlyFavs);
+                  }}
                 >
                   <option value="relevance">Relevância</option>
                   <option value="rating">Nota</option>
@@ -182,7 +258,11 @@ export default function App() {
                 <input
                   type="checkbox"
                   checked={onlyFavs}
-                  onChange={(e) => setOnlyFavs(e.target.checked)}
+                  onChange={(e) => {
+                    const nextFavs = e.target.checked;
+                    setOnlyFavs(nextFavs);
+                    updateUrl(active, sort, nextFavs);
+                  }}
                 />
                 Mostrar só favoritos
               </label>
@@ -193,7 +273,12 @@ export default function App() {
         {showEmptyState && (
           <p className="muted">Faça uma busca para ver resultados.</p>
         )}
-        {showNoResults && <p className="muted">Nenhum resultado encontrado.</p>}
+        {showNoResults && (
+          <p className="muted">
+            Nenhum resultado encontrado
+            {onlyFavs ? " (com filtro de favoritos)" : ""}.
+          </p>
+        )}
 
         {loading && (
           <ul className="grid">
