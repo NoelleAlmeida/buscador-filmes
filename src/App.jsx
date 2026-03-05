@@ -3,14 +3,42 @@ import { useState } from "react";
 export default function App() {
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // depois a gente busca na API aqui
-    setMovies([
-      { id: 1, title: "Exemplo de Filme 1", year: "2024" },
-      { id: 2, title: "Exemplo de Filme 2", year: "2023" },
-    ]);
+
+    const q = query.trim();
+    if (!q) return;
+
+    setLoading(true);
+    setError("");
+    setMovies([]);
+
+    try {
+      const res = await fetch(
+        `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`,
+      );
+      if (!res.ok) throw new Error("Falha ao buscar. Tente novamente.");
+
+      const data = await res.json();
+
+      const mapped = data.map((item) => {
+        const show = item.show;
+        return {
+          id: show.id,
+          title: show.name,
+          year: show.premiered ? show.premiered.slice(0, 4) : "—",
+        };
+      });
+
+      setMovies(mapped);
+    } catch (err) {
+      setError(err.message || "Erro inesperado.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -31,16 +59,25 @@ export default function App() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Digite o nome de um filme..."
+          placeholder="Digite um filme/série..."
           style={{ flex: 1, padding: 12, fontSize: 16 }}
         />
-        <button style={{ padding: "12px 16px", fontSize: 16 }}>Buscar</button>
+        <button
+          disabled={loading}
+          style={{ padding: "12px 16px", fontSize: 16 }}
+        >
+          {loading ? "Buscando..." : "Buscar"}
+        </button>
       </form>
 
       <section style={{ marginTop: 24 }}>
-        {movies.length === 0 ? (
+        {error && <p style={{ color: "crimson" }}>{error}</p>}
+
+        {!error && !loading && movies.length === 0 && (
           <p>Faça uma busca para ver resultados.</p>
-        ) : (
+        )}
+
+        {movies.length > 0 && (
           <ul
             style={{ listStyle: "none", padding: 0, display: "grid", gap: 12 }}
           >
