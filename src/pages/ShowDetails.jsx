@@ -58,22 +58,39 @@ export default function ShowDetails() {
         margin: "0 auto",
         padding: 24,
         fontFamily: "system-ui",
+        color: "#f4f4f5",
       }}
     >
       <div
-        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+        }}
       >
         <Link to="/" style={{ textDecoration: "none" }}>
           ← Voltar
         </Link>
 
-        <Link to="/favorites" style={{ textDecoration: "none" }}>
+        <Link
+          to="/favorites"
+          style={{
+            textDecoration: "none",
+            padding: "10px 12px",
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.16)",
+            background: "rgba(255,255,255,0.06)",
+            backdropFilter: "blur(8px)",
+            whiteSpace: "nowrap",
+          }}
+        >
           ⭐ Favoritos ({favorites.length})
         </Link>
       </div>
 
       {loading && <p style={{ marginTop: 16 }}>Carregando...</p>}
-      {error && <p style={{ marginTop: 16, color: "crimson" }}>{error}</p>}
+      {error && <p style={{ marginTop: 16, color: "#ff4d6d" }}>{error}</p>}
 
       {!loading && !error && show && (
         <article
@@ -90,17 +107,23 @@ export default function ShowDetails() {
               <img
                 src={show.image.medium}
                 alt={`Poster de ${show.name}`}
-                style={{ width: "100%", borderRadius: 12 }}
+                style={{
+                  width: "100%",
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                }}
               />
             ) : (
               <div
                 style={{
                   width: "100%",
                   aspectRatio: "2/3",
-                  background: "#f2f2f2",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
                   borderRadius: 12,
                   display: "grid",
                   placeItems: "center",
+                  opacity: 0.85,
                 }}
               >
                 Sem imagem
@@ -118,10 +141,20 @@ export default function ShowDetails() {
                 marginTop: 12,
                 width: "100%",
                 padding: "10px 12px",
-                border: "1px solid #e3e3e3",
-                borderRadius: 10,
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: "rgba(255,255,255,0.10)",
+                color: "#f4f4f5",
                 cursor: "pointer",
-                background: "white",
+                transition: "background 120ms ease, transform 120ms ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.18)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,0.10)";
+                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               {isFav ? "★ Remover dos favoritos" : "☆ Favoritar"}
@@ -139,7 +172,7 @@ export default function ShowDetails() {
 
             {show.summary ? (
               <div
-                style={{ marginTop: 12, lineHeight: 1.5 }}
+                style={{ marginTop: 12, lineHeight: 1.5, opacity: 0.95 }}
                 dangerouslySetInnerHTML={{ __html: show.summary }}
               />
             ) : (
