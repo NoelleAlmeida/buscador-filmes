@@ -18,10 +18,11 @@ export default function About() {
       </div>
 
       <section className="aboutCard">
-        <h1 className="aboutTitle">Sobre o projeto</h1>
+        <h1 className="aboutTitle">Sobre o CineBusca</h1>
         <p className="aboutMuted" style={{ marginTop: 10 }}>
-          Este projeto foi criado para praticar React de forma bem próxima do
-          mundo real: consumo de API, rotas, estados, persistência e deploy.
+          O <strong>CineBusca</strong> é um app feito para praticar React de
+          forma bem próxima do mundo real: consumo de API, rotas, estados,
+          persistência e deploy.
         </p>
 
         <div className="aboutLinks">
@@ -40,7 +41,7 @@ export default function About() {
               <li>Busca filmes/séries via API</li>
               <li>Exibe cards com imagem, nota e gêneros</li>
               <li>
-                Página de detalhes com rota (<code>/show/:id</code>)
+                Página de detalhes (<code>/show/:id</code>)
               </li>
               <li>Favoritos com LocalStorage</li>
               <li>Ordenação, “carregar mais”, histórico de buscas</li>
@@ -68,9 +69,9 @@ export default function About() {
 
             <h2 style={{ margin: "14px 0 0" }}>Próximas melhorias</h2>
             <ul className="aboutList">
-              <li>Adicionar testes de interface (E2E)</li>
-              <li>Melhorar paginação e cache de resultados</li>
-              <li>Melhorar acessibilidade (ARIA mais completa)</li>
+              <li>Cache de resultados por termo buscado</li>
+              <li>Testes E2E (Playwright/Cypress)</li>
+              <li>Modo claro/escuro</li>
             </ul>
           </div>
         </div>

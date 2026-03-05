@@ -248,7 +248,7 @@ export default function App() {
 
       <header className="header">
         <div>
-          <h1 className="title">Buscador de Filmes 🎬</h1>
+          <h1 className="title">CineBusca 🎬</h1>
           <p className="subtitle">
             React + Vite + API • <span className="kbd">/</span> foca •{" "}
             <span className="kbd">Esc</span> limpa
