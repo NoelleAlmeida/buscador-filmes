@@ -52,19 +52,28 @@ export default function App() {
     }
   }
 
+  function handleClear() {
+    setQuery("");
+    setMovies([]);
+    setError("");
+    setLoading(false);
+  }
+
+  const hasQuery = query.trim().length > 0;
+  const showEmptyState = !loading && !error && !hasQuery && movies.length === 0;
+  const showNoResults = !loading && !error && hasQuery && movies.length === 0;
+
   return (
     <main className="container">
       <header className="header">
-        <div className="headerRow">
-          <div>
-            <h1 className="title">Buscador de Filmes 🎬</h1>
-            <p className="subtitle">React + Vite + API</p>
-          </div>
-
-          <Link to="/favorites" className="favoritesLink">
-            ⭐ Favoritos ({favorites.length})
-          </Link>
+        <div>
+          <h1 className="title">Buscador de Filmes 🎬</h1>
+          <p className="subtitle">React + Vite + API</p>
         </div>
+
+        <Link to="/favorites" className="favoritesLink">
+          ⭐ Favoritos ({favorites.length})
+        </Link>
       </header>
 
       <form onSubmit={handleSubmit} className="form">
@@ -74,21 +83,42 @@ export default function App() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Digite um filme/série..."
         />
-        <button className="button" disabled={loading}>
-          {loading ? "Buscando..." : "Buscar"}
-        </button>
+
+        <div className="actions">
+          <button
+            className="button"
+            disabled={loading || !hasQuery}
+            type="submit"
+          >
+            {loading ? "Buscando..." : "Buscar"}
+          </button>
+
+          <button
+            className="button buttonSecondary"
+            type="button"
+            onClick={handleClear}
+            disabled={loading || (!hasQuery && movies.length === 0 && !error)}
+            title="Limpar busca"
+          >
+            Limpar
+          </button>
+        </div>
       </form>
 
       <section className="section">
         {error && <p className="error">{error}</p>}
 
-        {!error && !loading && movies.length === 0 && (
-          <p className="muted">Faça uma busca para ver resultados.</p>
+        {!error && !loading && hasQuery && (
+          <p className="count">
+            Resultados para <strong>{query.trim()}</strong>:{" "}
+            <strong>{movies.length}</strong>
+          </p>
         )}
 
-        {!error && !loading && query.trim() && movies.length === 0 && (
-          <p className="muted">Nenhum resultado encontrado.</p>
+        {showEmptyState && (
+          <p className="muted">Faça uma busca para ver resultados.</p>
         )}
+        {showNoResults && <p className="muted">Nenhum resultado encontrado.</p>}
 
         {movies.length > 0 && (
           <ul className="grid">
@@ -99,6 +129,8 @@ export default function App() {
                 <li key={m.id} className="card">
                   <Link to={`/show/${m.id}`} className="cardLink">
                     <div className="posterWrap">
+                      {isFav && <span className="favBadge">★ Favorito</span>}
+
                       {m.image ? (
                         <img
                           className="poster"
