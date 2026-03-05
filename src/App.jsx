@@ -14,34 +14,27 @@ const SORTS = ["relevance", "rating", "year"];
 export default function App() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // input + busca atual
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
 
-  // dados
   const [movies, setMovies] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // filtros
   const [sort, setSort] = useState("relevance");
   const [onlyFavs, setOnlyFavs] = useState(false);
 
-  // UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // favoritos e recentes
   const [favorites, setFavorites] = useState([]);
   const [recent, setRecent] = useState([]);
 
-  // refs (pra evitar loops e buscas duplicadas)
   const abortRef = useRef(null);
   const lastFetchedRef = useRef("");
   const prevUrlQRef = useRef("");
   const selfUrlUpdateRef = useRef(false);
   const skipDebounceRef = useRef(false);
 
-  // A11y/UX refs
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
 
@@ -102,10 +95,7 @@ export default function App() {
       setError(err.message || "Erro inesperado.");
     } finally {
       setLoading(false);
-      // depois da busca (sucesso ou erro), manda foco pros resultados pra teclado/leitore
-      setTimeout(() => {
-        resultsRef.current?.focus?.();
-      }, 0);
+      setTimeout(() => resultsRef.current?.focus?.(), 0);
     }
   }
 
@@ -115,16 +105,13 @@ export default function App() {
 
     setActiveQuery(cleaned);
 
-    // salva recentes
     const nextRecent = addRecentSearch(cleaned);
     setRecent(nextRecent);
 
-    // atualiza url + busca
     updateUrl(cleaned, sort, onlyFavs);
     runSearch(cleaned);
   }
 
-  // ✅ Ao abrir link com ?q=... (ou voltar/avançar), o app acompanha
   useEffect(() => {
     const q = (searchParams.get("q") || "").trim();
     const spSort = searchParams.get("sort") || "relevance";
@@ -159,7 +146,6 @@ export default function App() {
     }
   }, [searchParams]);
 
-  // ✅ Buscar enquanto digita (debounce)
   useEffect(() => {
     if (skipDebounceRef.current) {
       skipDebounceRef.current = false;
@@ -195,30 +181,23 @@ export default function App() {
 
     updateUrl("", sort, onlyFavs);
 
-    if (focusInput) {
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
+    if (focusInput) setTimeout(() => inputRef.current?.focus(), 0);
   }
 
-  // ✅ Acessibilidade/atalhos de teclado
   useEffect(() => {
-    // foco no input ao abrir a página
     inputRef.current?.focus();
 
     function onKeyDown(e) {
-      // não roubar atalhos enquanto digita em inputs/textarea
       const tag = (e.target?.tagName || "").toLowerCase();
       const typing =
         tag === "input" || tag === "textarea" || e.target?.isContentEditable;
 
-      // "/" foca na busca (padrão em muitos sites)
       if (e.key === "/" && !typing) {
         e.preventDefault();
         inputRef.current?.focus();
         return;
       }
 
-      // "Escape" limpa busca (se tiver algo)
       if (e.key === "Escape") {
         const hasSomething = query.trim() || movies.length || error;
         if (hasSomething) {
@@ -259,9 +238,10 @@ export default function App() {
     !loading && !error && !hasActiveQuery && movies.length === 0;
   const showNoResults = !loading && !error && hasActiveQuery && total === 0;
 
+  const yearNow = new Date().getFullYear();
+
   return (
     <main className="container">
-      {/* link “pular para resultados” (teclado/leitor) */}
       <a href="#results" className="skipLink">
         Pular para resultados
       </a>
@@ -275,13 +255,23 @@ export default function App() {
           </p>
         </div>
 
-        <Link
-          to="/favorites"
-          className="favoritesLink"
-          aria-label="Abrir página de favoritos"
-        >
-          ⭐ Favoritos ({favorites.length})
-        </Link>
+        <div className="topLinks">
+          <Link
+            to="/about"
+            className="pillLink"
+            aria-label="Abrir página Sobre"
+          >
+            ℹ️ Sobre
+          </Link>
+
+          <Link
+            to="/favorites"
+            className="pillLink"
+            aria-label="Abrir página de favoritos"
+          >
+            ⭐ Favoritos ({favorites.length})
+          </Link>
+        </div>
       </header>
 
       <form
@@ -323,7 +313,6 @@ export default function App() {
         </div>
       </form>
 
-      {/* ✅ Recentes */}
       {recent.length > 0 && (
         <div className="recentRow" aria-label="Buscas recentes">
           <div className="recentLeft">
@@ -363,7 +352,6 @@ export default function App() {
       )}
 
       <section className="section" id="results">
-        {/* container focável para teclado depois da busca */}
         <div
           ref={resultsRef}
           tabIndex={-1}
@@ -543,6 +531,36 @@ export default function App() {
           </>
         )}
       </section>
+
+      <footer className="footer">
+        <div className="footerLeft">
+          <span>© {yearNow} Noelle Almeida</span>
+          <span className="footerDot">•</span>
+          <Link to="/about" className="footerLink">
+            Sobre
+          </Link>
+        </div>
+
+        <div className="footerRight">
+          <a
+            className="footerLink"
+            href="https://github.com/NoelleAlmeida/buscador-filmes"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+          <span className="footerDot">•</span>
+          <a
+            className="footerLink"
+            href="https://buscador-filmes-navy.vercel.app"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Vercel
+          </a>
+        </div>
+      </footer>
     </main>
   );
 }
