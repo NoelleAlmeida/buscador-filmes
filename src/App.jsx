@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./App.css";
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -30,6 +31,9 @@ export default function App() {
           id: show.id,
           title: show.name,
           year: show.premiered ? show.premiered.slice(0, 4) : "—",
+          image: show.image?.medium || "",
+          genres: show.genres || [],
+          rating: show.rating?.average ?? null,
         };
       });
 
@@ -42,56 +46,68 @@ export default function App() {
   }
 
   return (
-    <main
-      style={{
-        padding: 24,
-        fontFamily: "system-ui",
-        maxWidth: 900,
-        margin: "0 auto",
-      }}
-    >
-      <h1>Buscador de Filmes 🎬</h1>
+    <main className="container">
+      <header className="header">
+        <h1 className="title">Buscador de Filmes 🎬</h1>
+        <p className="subtitle">React + Vite + API</p>
+      </header>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "flex", gap: 12, marginTop: 16 }}
-      >
+      <form onSubmit={handleSubmit} className="form">
         <input
+          className="input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Digite um filme/série..."
-          style={{ flex: 1, padding: 12, fontSize: 16 }}
         />
-        <button
-          disabled={loading}
-          style={{ padding: "12px 16px", fontSize: 16 }}
-        >
+        <button className="button" disabled={loading}>
           {loading ? "Buscando..." : "Buscar"}
         </button>
       </form>
 
-      <section style={{ marginTop: 24 }}>
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
+      <section className="section">
+        {error && <p className="error">{error}</p>}
 
         {!error && !loading && movies.length === 0 && (
-          <p>Faça uma busca para ver resultados.</p>
+          <p className="muted">Faça uma busca para ver resultados.</p>
+        )}
+
+        {!error && !loading && query.trim() && movies.length === 0 && (
+          <p className="muted">Nenhum resultado encontrado.</p>
         )}
 
         {movies.length > 0 && (
-          <ul
-            style={{ listStyle: "none", padding: 0, display: "grid", gap: 12 }}
-          >
+          <ul className="grid">
             {movies.map((m) => (
-              <li
-                key={m.id}
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                  padding: 12,
-                }}
-              >
-                <strong>{m.title}</strong>
-                <div style={{ opacity: 0.8 }}>Ano: {m.year}</div>
+              <li key={m.id} className="card">
+                <div className="posterWrap">
+                  {m.image ? (
+                    <img
+                      className="poster"
+                      src={m.image}
+                      alt={`Poster de ${m.title}`}
+                    />
+                  ) : (
+                    <div className="posterPlaceholder">Sem imagem</div>
+                  )}
+                </div>
+
+                <div className="cardBody">
+                  <div className="cardTop">
+                    <strong className="cardTitle">{m.title}</strong>
+                    <span className="pill">{m.year}</span>
+                  </div>
+
+                  <div className="meta">
+                    <span className="metaItem">
+                      ⭐ {m.rating !== null ? m.rating : "—"}
+                    </span>
+                    <span className="metaItem">
+                      {m.genres.length
+                        ? m.genres.slice(0, 2).join(" • ")
+                        : "Sem gênero"}
+                    </span>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
