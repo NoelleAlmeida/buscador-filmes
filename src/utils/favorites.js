@@ -1,22 +1,53 @@
 const KEY = "bf_favorites_v1";
 
-export function getFavorites() {
+function safeParse(raw) {
   try {
-    const raw = localStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-export function toggleFavorite(show) {
-  const current = getFavorites();
-  const exists = current.some((item) => item.id === show.id);
+function normalize(show) {
+  return {
+    id: show.id,
+    title: show.title ?? show.name ?? "",
+    year: show.year ?? "—",
+    image: show.image ?? "",
+    genres: Array.isArray(show.genres) ? show.genres : [],
+    rating: show.rating ?? null,
+  };
+}
 
-  const next = exists
-    ? current.filter((item) => item.id !== show.id)
-    : [...current, show];
+export function getFavorites() {
+  const raw = localStorage.getItem(KEY);
+  const parsed = safeParse(raw);
+  return Array.isArray(parsed) ? parsed : [];
+}
 
+function setFavorites(next) {
   localStorage.setItem(KEY, JSON.stringify(next));
   return next;
+}
+
+export function toggleFavorite(show) {
+  const current = getFavorites();
+  const normalized = normalize(show);
+
+  const exists = current.some((item) => item.id === normalized.id);
+  const next = exists
+    ? current.filter((item) => item.id !== normalized.id)
+    : [...current, normalized];
+
+  return setFavorites(next);
+}
+
+export function removeFavorite(id) {
+  const current = getFavorites();
+  const next = current.filter((item) => String(item.id) !== String(id));
+  return setFavorites(next);
+}
+
+export function clearFavorites() {
+  return setFavorites([]);
 }

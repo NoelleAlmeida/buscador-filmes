@@ -1,119 +1,99 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getFavorites } from "../utils/favorites";
+import {
+  clearFavorites,
+  getFavorites,
+  removeFavorite,
+} from "../utils/favorites";
+import "./Favorites.css";
 
 export default function Favorites() {
   const [items, setItems] = useState([]);
 
-  useEffect(() => {
+  function refresh() {
     setItems(getFavorites());
+  }
+
+  useEffect(() => {
+    refresh();
   }, []);
 
   return (
-    <main
-      style={{
-        maxWidth: 980,
-        margin: "0 auto",
-        padding: 24,
-        fontFamily: "system-ui",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
+    <main className="favPage">
+      <div className="favTop">
         <h1 style={{ margin: 0 }}>⭐ Favoritos</h1>
-        <Link to="/" style={{ textDecoration: "none" }}>
+        <Link to="/" className="favPill">
           ← Voltar
         </Link>
-      </header>
-      <div style={{ marginTop: 12 }}>
+      </div>
+
+      <div className="favActions">
+        <button className="favBtn" onClick={refresh} type="button">
+          🔄 Atualizar
+        </button>
+
         <button
-          onClick={() => setItems(getFavorites())}
-          style={{
-            padding: "10px 12px",
-            border: "1px solid #e3e3e3",
-            borderRadius: 10,
-            cursor: "pointer",
-            background: "white",
+          className="favBtn favBtnDanger"
+          type="button"
+          disabled={items.length === 0}
+          onClick={() => {
+            const ok = confirm(
+              "Tem certeza que deseja limpar todos os favoritos?",
+            );
+            if (!ok) return;
+            clearFavorites();
+            refresh();
           }}
         >
-          🔄 Atualizar lista
+          🗑 Limpar tudo
         </button>
       </div>
 
-      <section style={{ marginTop: 16 }}>
-        {items.length === 0 ? (
-          <p style={{ opacity: 0.8 }}>Você ainda não favoritou nada.</p>
-        ) : (
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
-              display: "grid",
-              gap: 12,
-              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            }}
-          >
-            {items.map((m) => (
-              <li
-                key={m.id}
-                style={{
-                  border: "1px solid #e3e3e3",
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  background: "white",
-                }}
-              >
-                <Link
-                  to={`/show/${m.id}`}
-                  style={{
-                    display: "block",
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "100%",
-                      aspectRatio: "16 / 9",
-                      background: "#f2f2f2",
-                    }}
-                  >
-                    {m.image ? (
-                      <img
-                        src={m.image}
-                        alt={`Poster de ${m.title}`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <div style={{ padding: 12, opacity: 0.7 }}>
-                        Sem imagem
-                      </div>
-                    )}
+      {items.length === 0 ? (
+        <p className="favMuted">Você ainda não favoritou nada.</p>
+      ) : (
+        <ul className="favGrid">
+          {items.map((m) => (
+            <li key={m.id} className="favCard">
+              <Link to={`/show/${m.id}`} className="favCardLink">
+                <div className="favPoster">
+                  {m.image ? (
+                    <img src={m.image} alt={`Poster de ${m.title}`} />
+                  ) : (
+                    <div style={{ opacity: 0.8 }}>Sem imagem</div>
+                  )}
+                </div>
+
+                <div className="favBody">
+                  <div className="favRow">
+                    <strong className="favTitle">{m.title}</strong>
+                    <span className="favPillSmall">{m.year ?? "—"}</span>
                   </div>
 
-                  <div style={{ padding: 12 }}>
-                    <strong>{m.title}</strong>
-                    <div style={{ opacity: 0.8, marginTop: 6 }}>
-                      ⭐ {m.rating ?? "—"} • {m.year ?? "—"}
-                    </div>
+                  <div className="favMeta">
+                    ⭐ {m.rating ?? "—"} •{" "}
+                    {m.genres?.length
+                      ? m.genres.slice(0, 2).join(" • ")
+                      : "Sem gênero"}
                   </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+
+                  <button
+                    type="button"
+                    className="favRemove"
+                    onClick={(e) => {
+                      e.preventDefault(); // não navegar
+                      removeFavorite(m.id);
+                      refresh();
+                    }}
+                  >
+                    Remover dos favoritos
+                  </button>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }
