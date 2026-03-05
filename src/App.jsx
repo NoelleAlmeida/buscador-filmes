@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import "./App.css";
 
 export default function App() {
@@ -79,35 +80,37 @@ export default function App() {
           <ul className="grid">
             {movies.map((m) => (
               <li key={m.id} className="card">
-                <div className="posterWrap">
-                  {m.image ? (
-                    <img
-                      className="poster"
-                      src={m.image}
-                      alt={`Poster de ${m.title}`}
-                    />
-                  ) : (
-                    <div className="posterPlaceholder">Sem imagem</div>
-                  )}
-                </div>
-
-                <div className="cardBody">
-                  <div className="cardTop">
-                    <strong className="cardTitle">{m.title}</strong>
-                    <span className="pill">{m.year}</span>
+                <Link to={`/show/${m.id}`} className="cardLink">
+                  <div className="posterWrap">
+                    {m.image ? (
+                      <img
+                        className="poster"
+                        src={m.image}
+                        alt={`Poster de ${m.title}`}
+                      />
+                    ) : (
+                      <div className="posterPlaceholder">Sem imagem</div>
+                    )}
                   </div>
 
-                  <div className="meta">
-                    <span className="metaItem">
-                      ⭐ {m.rating !== null ? m.rating : "—"}
-                    </span>
-                    <span className="metaItem">
-                      {m.genres.length
-                        ? m.genres.slice(0, 2).join(" • ")
-                        : "Sem gênero"}
-                    </span>
+                  <div className="cardBody">
+                    <div className="cardTop">
+                      <strong className="cardTitle">{m.title}</strong>
+                      <span className="pill">{m.year}</span>
+                    </div>
+
+                    <div className="meta">
+                      <span className="metaItem">
+                        ⭐ {m.rating !== null ? m.rating : "—"}
+                      </span>
+                      <span className="metaItem">
+                        {m.genres.length
+                          ? m.genres.slice(0, 2).join(" • ")
+                          : "Sem gênero"}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </li>
             ))}
           </ul>
