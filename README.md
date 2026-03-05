@@ -1,5 +1,7 @@
 # CineBusca 🎬
 
+![Preview do CineBusca](./assets/preview.png)
+
 Buscador simples feito em **React + Vite** que consulta uma API e exibe resultados na tela.
 
 ## ✅ Demo
