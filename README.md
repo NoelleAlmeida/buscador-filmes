@@ -1,4 +1,4 @@
-# Buscador de Filmes 🎬
+# CineBusca 🎬
 
 Buscador simples feito em **React + Vite** que consulta uma API e exibe resultados na tela.
 
